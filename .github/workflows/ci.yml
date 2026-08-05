@@ -54,6 +54,21 @@ jobs:
           echo apply > /tmp/publication-phase
           git checkout --detach 6654dbd6ae94123cbc9cf29d7bf9da8232d48e66
           tar -xzf /tmp/runtime-inspector-v2.tar.gz
+          python <<'PY'
+          from pathlib import Path
+
+          path = Path('src/integration-inspector.ts')
+          source = path.read_text()
+          source = source.replace(
+              "  function isPrivacySafePropertyName(value: string): boolean {\n    const controlCharacters = /[\\u0000-\\u001f\\u007f]/;\n    const emailAddress = /@/;\n",
+              "  function isPrivacySafePropertyName(value: string): boolean {\n    const hasControlCharacters = Array.from(value).some(character => {\n      const codePoint = character.codePointAt(0);\n      return codePoint !== undefined && (codePoint <= 0x1f || codePoint === 0x7f);\n    });\n    const emailAddress = /@/;\n",
+          )
+          source = source.replace(
+              '      !controlCharacters.test(value) &&',
+              '      !hasControlCharacters &&',
+          )
+          path.write_text(source)
+          PY
 
       - name: Install locked dependencies
         run: |
