@@ -31,7 +31,7 @@ jobs:
         with:
           node-version: 22
 
-      - name: Assemble and verify source payload
+      - name: Assemble source payload
         env:
           GH_TOKEN: ${{ github.token }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
@@ -41,7 +41,11 @@ jobs:
             --jq 'sort_by(.id) | map(select(.body | startswith("PAYLOAD:")) | .body | ltrimstr("PAYLOAD:")) | join("")' \
             > /tmp/runtime-inspector-v2.b64
           base64 --decode /tmp/runtime-inspector-v2.b64 > /tmp/runtime-inspector-v2.tar.gz
-          echo 'de216564474293d57c18f30b018eb59583db1b34dfa0241e84d84b3943bd6243  /tmp/runtime-inspector-v2.tar.gz' | sha256sum --check
+          wc -c /tmp/runtime-inspector-v2.b64 /tmp/runtime-inspector-v2.tar.gz
+          sha256sum /tmp/runtime-inspector-v2.tar.gz
+
+      - name: Verify source payload
+        run: echo 'de216564474293d57c18f30b018eb59583db1b34dfa0241e84d84b3943bd6243  /tmp/runtime-inspector-v2.tar.gz' | sha256sum --check
 
       - name: Restore v1 baseline and apply v2 files
         shell: bash
@@ -72,3 +76,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
         run: gh issue close "$ISSUE_NUMBER" --reason completed
+
+      - name: Report failure diagnostics
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        shell: bash
+        run: |
+          B64_SIZE=$(wc -c < /tmp/runtime-inspector-v2.b64 2>/dev/null || echo unavailable)
+          TAR_SIZE=$(wc -c < /tmp/runtime-inspector-v2.tar.gz 2>/dev/null || echo unavailable)
+          SHA=$(sha256sum /tmp/runtime-inspector-v2.tar.gz 2>/dev/null | cut -d' ' -f1 || echo unavailable)
+          gh issue comment "$ISSUE_NUMBER" --body "PUBLICATION_FAILURE b64_size=${B64_SIZE} tar_size=${TAR_SIZE} sha256=${SHA}"
