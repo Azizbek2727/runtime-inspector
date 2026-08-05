@@ -1,4 +1,4 @@
-name: Apply Runtime Inspector v2 payload
+name: Prepare validated Runtime Inspector v2 tree
 
 on:
   issue_comment:
@@ -9,9 +9,9 @@ permissions:
   issues: write
 
 jobs:
-  apply:
-    if: github.event.issue.title == 'runtime-inspector-v2-payload-de216564' && github.event.comment.body == 'APPLY'
-    name: Format, validate, and publish
+  prepare:
+    if: github.event.issue.title == 'runtime-inspector-v2-payload-de216564' && github.event.comment.body == 'PREPARE_VALIDATED_TREE'
+    name: Format, validate, and publish candidate branch
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -31,7 +31,7 @@ jobs:
         with:
           node-version: 22
 
-      - name: Assemble source payload
+      - name: Assemble and verify source payload
         env:
           GH_TOKEN: ${{ github.token }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
@@ -42,10 +42,6 @@ jobs:
             --jq '. as $comments | [5195901919,5196145210,5195923173,5195969099,5196049061,5196056644,5196064206,5196070580] | map(. as $id | ($comments[] | select(.id == $id) | .body | ltrimstr("PAYLOAD:"))) | join("")' \
             > /tmp/runtime-inspector-v2.b64
           base64 --decode /tmp/runtime-inspector-v2.b64 > /tmp/runtime-inspector-v2.tar.gz
-
-      - name: Verify source payload
-        run: |
-          echo verify > /tmp/publication-phase
           echo 'de216564474293d57c18f30b018eb59583db1b34dfa0241e84d84b3943bd6243  /tmp/runtime-inspector-v2.tar.gz' | sha256sum --check
 
       - name: Restore v1 baseline and apply v2 files
@@ -71,14 +67,10 @@ jobs:
           PY
 
       - name: Install locked dependencies
-        run: |
-          echo install > /tmp/publication-phase
-          pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Format repository
-        run: |
-          echo format > /tmp/publication-phase
-          pnpm format
+        run: pnpm format
 
       - name: Validate repository
         shell: bash
@@ -87,21 +79,22 @@ jobs:
           set -o pipefail
           pnpm validate 2>&1 | tee /tmp/validate.log
 
-      - name: Publish atomic v2 commit
+      - name: Publish validated candidate tree
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
         shell: bash
         run: |
-          echo publish > /tmp/publication-phase
+          echo publish-candidate > /tmp/publication-phase
+          git checkout 6654dbd6ae94123cbc9cf29d7bf9da8232d48e66 -- .github/workflows/ci.yml
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
           git commit -m 'feat: add read-only runtime integration inspection'
-          git push --force origin HEAD:main
-
-      - name: Close payload issue
-        env:
-          GH_TOKEN: ${{ github.token }}
-          ISSUE_NUMBER: ${{ github.event.issue.number }}
-        run: gh issue close "$ISSUE_NUMBER" --reason completed
+          COMMIT_SHA=$(git rev-parse HEAD)
+          TREE_SHA=$(git rev-parse HEAD^{tree})
+          git push --force origin HEAD:refs/heads/agent/runtime-inspector-v2-validated
+          gh issue comment "$ISSUE_NUMBER" --body "VALIDATED_TREE commit=${COMMIT_SHA} tree=${TREE_SHA}"
 
       - name: Report failure diagnostics
         if: failure()
@@ -111,16 +104,13 @@ jobs:
         shell: bash
         run: |
           PHASE=$(cat /tmp/publication-phase 2>/dev/null || echo setup)
-          B64_SIZE=$(wc -c < /tmp/runtime-inspector-v2.b64 2>/dev/null || echo unavailable)
-          TAR_SIZE=$(wc -c < /tmp/runtime-inspector-v2.tar.gz 2>/dev/null || echo unavailable)
-          SHA=$(sha256sum /tmp/runtime-inspector-v2.tar.gz 2>/dev/null | cut -d' ' -f1 || echo unavailable)
           {
-            echo "PUBLICATION_FAILURE phase=${PHASE} b64_size=${B64_SIZE} tar_size=${TAR_SIZE} sha256=${SHA}"
+            echo "PREPARATION_FAILURE phase=${PHASE}"
             if [[ -f /tmp/validate.log ]]; then
               echo
               echo '```text'
               tail -n 100 /tmp/validate.log
               echo '```'
             fi
-          } > /tmp/publication-diagnostic.md
-          gh issue comment "$ISSUE_NUMBER" --body-file /tmp/publication-diagnostic.md
+          } > /tmp/preparation-diagnostic.md
+          gh issue comment "$ISSUE_NUMBER" --body-file /tmp/preparation-diagnostic.md
