@@ -41,8 +41,6 @@ jobs:
             --jq 'sort_by(.id) | map(select(.body | startswith("PAYLOAD:")) | .body | ltrimstr("PAYLOAD:")) | join("")' \
             > /tmp/runtime-inspector-v2.b64
           base64 --decode /tmp/runtime-inspector-v2.b64 > /tmp/runtime-inspector-v2.tar.gz
-          wc -c /tmp/runtime-inspector-v2.b64 /tmp/runtime-inspector-v2.tar.gz
-          sha256sum /tmp/runtime-inspector-v2.tar.gz
 
       - name: Verify source payload
         run: echo 'de216564474293d57c18f30b018eb59583db1b34dfa0241e84d84b3943bd6243  /tmp/runtime-inspector-v2.tar.gz' | sha256sum --check
@@ -87,4 +85,5 @@ jobs:
           B64_SIZE=$(wc -c < /tmp/runtime-inspector-v2.b64 2>/dev/null || echo unavailable)
           TAR_SIZE=$(wc -c < /tmp/runtime-inspector-v2.tar.gz 2>/dev/null || echo unavailable)
           SHA=$(sha256sum /tmp/runtime-inspector-v2.tar.gz 2>/dev/null | cut -d' ' -f1 || echo unavailable)
-          gh issue comment "$ISSUE_NUMBER" --body "PUBLICATION_FAILURE b64_size=${B64_SIZE} tar_size=${TAR_SIZE} sha256=${SHA}"
+          CHUNKS=$(gh api "/repos/${GITHUB_REPOSITORY}/issues/${ISSUE_NUMBER}/comments?per_page=100" --jq '[.[] | select(.body | startswith("PAYLOAD:")) | "\(.id):\((.body | ltrimstr("PAYLOAD:")) | length)"] | join(",")')
+          gh issue comment "$ISSUE_NUMBER" --body "PUBLICATION_FAILURE b64_size=${B64_SIZE} tar_size=${TAR_SIZE} sha256=${SHA} chunks=${CHUNKS}"
