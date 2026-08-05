@@ -1,0 +1,121 @@
+{
+  "dom": {
+    "audioElementCount": 0,
+    "customElementCount": 2,
+    "rootElement": "html"
+  },
+  "environment": {
+    "browser": {
+      "name": "Google Chrome",
+      "version": "120.0.0.0"
+    },
+    "currentUrl": {
+      "fragmentPresent": false,
+      "origin": "https://example.com",
+      "pathSegmentCount": 1,
+      "pathnameTemplate": "/:segment",
+      "queryPresent": false
+    },
+    "documentVisibility": "visible",
+    "pageTitle": {
+      "available": true,
+      "length": 11,
+      "redacted": false,
+      "text": "example.com"
+    },
+    "platform": "Linux x86_64",
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36"
+  },
+  "media": {
+    "elements": [],
+    "inspectedElementCount": 0,
+    "totalElementCount": 0,
+    "truncated": false
+  },
+  "network": {
+    "eventSource": true,
+    "fetch": true,
+    "webSocket": true,
+    "xmlHttpRequest": true
+  },
+  "performance": {
+    "loadedScriptCount": 3,
+    "resourceCount": 9,
+    "resourceCountsByInitiatorType": {
+      "css": 1,
+      "fetch": 2,
+      "img": 3,
+      "script": 3
+    },
+    "scriptElementCount": 3,
+    "stylesheetCount": 1
+  },
+  "runtime": {
+    "audioElementCount": 0,
+    "broadcastChannel": true,
+    "cacheStorage": true,
+    "htmlAudioElement": true,
+    "indexedDb": true,
+    "navigatorMediaSession": true,
+    "serviceWorker": true,
+    "sharedWorker": true,
+    "webApis": {
+      "abortController": true,
+      "broadcastChannel": true,
+      "cacheStorage": true,
+      "eventSource": true,
+      "fetch": true,
+      "htmlAudioElement": true,
+      "indexedDb": true,
+      "intersectionObserver": true,
+      "mediaSession": true,
+      "mutationObserver": true,
+      "performanceObserver": true,
+      "resizeObserver": true,
+      "serviceWorker": true,
+      "sharedWorker": true,
+      "webAssembly": true,
+      "webSocket": true,
+      "worker": true,
+      "xmlHttpRequest": true
+    },
+    "webSocket": true
+  },
+  "schemaVersion": "1.0.0",
+  "storage": {
+    "indexedDb": {
+      "accessible": true,
+      "enumerationSupported": true,
+      "names": ["app-cache"],
+      "redactedCount": 0,
+      "totalCount": 1
+    },
+    "localStorage": {
+      "accessible": true,
+      "names": ["language", "theme"],
+      "redactedCount": 1,
+      "totalCount": 3
+    },
+    "sessionStorage": {
+      "accessible": true,
+      "names": [],
+      "redactedCount": 0,
+      "totalCount": 0
+    }
+  },
+  "summary": {
+    "audioElementCount": 0,
+    "customElementCount": 2,
+    "readOnly": true,
+    "redactedStorageNameCount": 1,
+    "resourceCount": 9,
+    "storageNameCount": 4
+  },
+  "workers": {
+    "broadcastChannel": true,
+    "dedicatedWorker": true,
+    "serviceWorker": true,
+    "serviceWorkerControlled": false,
+    "sharedWorker": true
+  }
+}

@@ -1,0 +1,38 @@
+:root {
+  color-scheme: light dark;
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+body {
+  box-sizing: border-box;
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  min-width: 190px;
+  padding: 12px;
+}
+
+button {
+  appearance: none;
+  border: 1px solid color-mix(in srgb, currentColor 28%, transparent);
+  border-radius: 6px;
+  cursor: pointer;
+  font: inherit;
+  min-height: 36px;
+  padding: 8px 12px;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+button:not(:disabled):focus-visible {
+  outline: 2px solid Highlight;
+  outline-offset: 2px;
+}

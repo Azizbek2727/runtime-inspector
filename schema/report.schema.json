@@ -1,0 +1,330 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Azizbek2727/runtime-inspector/blob/main/schema/report.schema.json",
+  "title": "Runtime Inspector Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "environment",
+    "runtime",
+    "media",
+    "storage",
+    "workers",
+    "performance",
+    "network",
+    "dom",
+    "summary"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "environment": { "$ref": "#/$defs/environment" },
+    "runtime": { "$ref": "#/$defs/runtime" },
+    "media": { "$ref": "#/$defs/media" },
+    "storage": { "$ref": "#/$defs/storage" },
+    "workers": { "$ref": "#/$defs/workers" },
+    "performance": { "$ref": "#/$defs/performance" },
+    "network": { "$ref": "#/$defs/network" },
+    "dom": { "$ref": "#/$defs/dom" },
+    "summary": { "$ref": "#/$defs/summary" }
+  },
+  "$defs": {
+    "browser": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "type": "string" },
+        "version": { "type": ["string", "null"] }
+      }
+    },
+    "privacySafeUrl": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "origin",
+        "pathnameTemplate",
+        "pathSegmentCount",
+        "queryPresent",
+        "fragmentPresent"
+      ],
+      "properties": {
+        "origin": { "type": "string" },
+        "pathnameTemplate": { "type": "string" },
+        "pathSegmentCount": { "type": "integer", "minimum": 0 },
+        "queryPresent": { "type": "boolean" },
+        "fragmentPresent": { "type": "boolean" }
+      }
+    },
+    "pageTitle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["available", "text", "redacted", "length"],
+      "properties": {
+        "available": { "type": "boolean" },
+        "text": { "type": ["string", "null"] },
+        "redacted": { "type": "boolean" },
+        "length": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "browser",
+        "platform",
+        "userAgent",
+        "currentUrl",
+        "pageTitle",
+        "documentVisibility"
+      ],
+      "properties": {
+        "browser": { "$ref": "#/$defs/browser" },
+        "platform": { "type": "string" },
+        "userAgent": { "type": "string" },
+        "currentUrl": { "$ref": "#/$defs/privacySafeUrl" },
+        "pageTitle": { "$ref": "#/$defs/pageTitle" },
+        "documentVisibility": { "type": "string" }
+      }
+    },
+    "webApis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "abortController",
+        "broadcastChannel",
+        "cacheStorage",
+        "eventSource",
+        "fetch",
+        "htmlAudioElement",
+        "indexedDb",
+        "intersectionObserver",
+        "mediaSession",
+        "mutationObserver",
+        "performanceObserver",
+        "resizeObserver",
+        "serviceWorker",
+        "sharedWorker",
+        "webAssembly",
+        "webSocket",
+        "worker",
+        "xmlHttpRequest"
+      ],
+      "properties": {
+        "abortController": { "type": "boolean" },
+        "broadcastChannel": { "type": "boolean" },
+        "cacheStorage": { "type": "boolean" },
+        "eventSource": { "type": "boolean" },
+        "fetch": { "type": "boolean" },
+        "htmlAudioElement": { "type": "boolean" },
+        "indexedDb": { "type": "boolean" },
+        "intersectionObserver": { "type": "boolean" },
+        "mediaSession": { "type": "boolean" },
+        "mutationObserver": { "type": "boolean" },
+        "performanceObserver": { "type": "boolean" },
+        "resizeObserver": { "type": "boolean" },
+        "serviceWorker": { "type": "boolean" },
+        "sharedWorker": { "type": "boolean" },
+        "webAssembly": { "type": "boolean" },
+        "webSocket": { "type": "boolean" },
+        "worker": { "type": "boolean" },
+        "xmlHttpRequest": { "type": "boolean" }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "webApis",
+        "navigatorMediaSession",
+        "htmlAudioElement",
+        "audioElementCount",
+        "broadcastChannel",
+        "sharedWorker",
+        "serviceWorker",
+        "indexedDb",
+        "cacheStorage",
+        "webSocket"
+      ],
+      "properties": {
+        "webApis": { "$ref": "#/$defs/webApis" },
+        "navigatorMediaSession": { "type": "boolean" },
+        "htmlAudioElement": { "type": "boolean" },
+        "audioElementCount": { "type": "integer", "minimum": 0 },
+        "broadcastChannel": { "type": "boolean" },
+        "sharedWorker": { "type": "boolean" },
+        "serviceWorker": { "type": "boolean" },
+        "indexedDb": { "type": "boolean" },
+        "cacheStorage": { "type": "boolean" },
+        "webSocket": { "type": "boolean" }
+      }
+    },
+    "audioElement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "paused",
+        "muted",
+        "playbackRate",
+        "duration",
+        "currentTime",
+        "readyState"
+      ],
+      "properties": {
+        "paused": { "type": "boolean" },
+        "muted": { "type": "boolean" },
+        "playbackRate": { "type": ["number", "null"] },
+        "duration": { "type": ["number", "null"] },
+        "currentTime": { "type": ["number", "null"] },
+        "readyState": { "type": "integer", "minimum": 0, "maximum": 4 }
+      }
+    },
+    "media": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "totalElementCount",
+        "inspectedElementCount",
+        "truncated",
+        "elements"
+      ],
+      "properties": {
+        "totalElementCount": { "type": "integer", "minimum": 0 },
+        "inspectedElementCount": { "type": "integer", "minimum": 0 },
+        "truncated": { "type": "boolean" },
+        "elements": {
+          "type": "array",
+          "maxItems": 100,
+          "items": { "$ref": "#/$defs/audioElement" }
+        }
+      }
+    },
+    "storageNames": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["accessible", "totalCount", "redactedCount", "names"],
+      "properties": {
+        "accessible": { "type": "boolean" },
+        "totalCount": { "type": "integer", "minimum": 0 },
+        "redactedCount": { "type": "integer", "minimum": 0 },
+        "names": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "indexedDbNames": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "accessible",
+        "enumerationSupported",
+        "totalCount",
+        "redactedCount",
+        "names"
+      ],
+      "properties": {
+        "accessible": { "type": "boolean" },
+        "enumerationSupported": { "type": "boolean" },
+        "totalCount": { "type": "integer", "minimum": 0 },
+        "redactedCount": { "type": "integer", "minimum": 0 },
+        "names": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "storage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["localStorage", "sessionStorage", "indexedDb"],
+      "properties": {
+        "localStorage": { "$ref": "#/$defs/storageNames" },
+        "sessionStorage": { "$ref": "#/$defs/storageNames" },
+        "indexedDb": { "$ref": "#/$defs/indexedDbNames" }
+      }
+    },
+    "workers": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dedicatedWorker",
+        "sharedWorker",
+        "serviceWorker",
+        "serviceWorkerControlled",
+        "broadcastChannel"
+      ],
+      "properties": {
+        "dedicatedWorker": { "type": "boolean" },
+        "sharedWorker": { "type": "boolean" },
+        "serviceWorker": { "type": "boolean" },
+        "serviceWorkerControlled": { "type": "boolean" },
+        "broadcastChannel": { "type": "boolean" }
+      }
+    },
+    "performance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "loadedScriptCount",
+        "scriptElementCount",
+        "stylesheetCount",
+        "resourceCount",
+        "resourceCountsByInitiatorType"
+      ],
+      "properties": {
+        "loadedScriptCount": { "type": "integer", "minimum": 0 },
+        "scriptElementCount": { "type": "integer", "minimum": 0 },
+        "stylesheetCount": { "type": "integer", "minimum": 0 },
+        "resourceCount": { "type": "integer", "minimum": 0 },
+        "resourceCountsByInitiatorType": {
+          "type": "object",
+          "additionalProperties": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "network": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fetch", "xmlHttpRequest", "webSocket", "eventSource"],
+      "properties": {
+        "fetch": { "type": "boolean" },
+        "xmlHttpRequest": { "type": "boolean" },
+        "webSocket": { "type": "boolean" },
+        "eventSource": { "type": "boolean" }
+      }
+    },
+    "dom": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rootElement", "customElementCount", "audioElementCount"],
+      "properties": {
+        "rootElement": { "type": ["string", "null"] },
+        "customElementCount": { "type": "integer", "minimum": 0 },
+        "audioElementCount": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "readOnly",
+        "audioElementCount",
+        "customElementCount",
+        "resourceCount",
+        "storageNameCount",
+        "redactedStorageNameCount"
+      ],
+      "properties": {
+        "readOnly": { "const": true },
+        "audioElementCount": { "type": "integer", "minimum": 0 },
+        "customElementCount": { "type": "integer", "minimum": 0 },
+        "resourceCount": { "type": "integer", "minimum": 0 },
+        "storageNameCount": { "type": "integer", "minimum": 0 },
+        "redactedStorageNameCount": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

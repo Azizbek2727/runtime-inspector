@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Runtime Inspector",
+  "short_name": "Runtime Inspector",
+  "version": "0.1.0",
+  "description": "Exports privacy-preserving, read-only runtime diagnostics for the active page.",
+  "minimum_chrome_version": "120",
+  "permissions": ["activeTab", "clipboardWrite", "scripting"],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
+}
