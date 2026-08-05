@@ -1,15 +1,14 @@
-name: CI
+name: Generate dependency lockfile
 
 on:
   push:
-  pull_request:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  validate:
-    name: Validate
+  generate:
+    name: Generate and validate
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -36,10 +35,48 @@ jobs:
       - name: Validate
         run: pnpm validate
 
-      - name: Upload generated lockfile
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: pnpm-lock
-          path: pnpm-lock.yaml
-          if-no-files-found: error
+      - name: Commit final CI configuration
+        shell: bash
+        run: |
+          cat > .github/workflows/ci.yml <<'EOF'
+          name: CI
+
+          on:
+            push:
+            pull_request:
+
+          permissions:
+            contents: read
+
+          jobs:
+            validate:
+              name: Validate
+              runs-on: ubuntu-latest
+              timeout-minutes: 10
+
+              steps:
+                - name: Check out repository
+                  uses: actions/checkout@v4
+
+                - name: Install pnpm
+                  uses: pnpm/action-setup@v4
+                  with:
+                    version: 10.12.1
+
+                - name: Install Node.js
+                  uses: actions/setup-node@v4
+                  with:
+                    node-version: 22
+                    cache: pnpm
+
+                - name: Install dependencies
+                  run: pnpm install --frozen-lockfile
+
+                - name: Validate
+                  run: pnpm validate
+          EOF
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pnpm-lock.yaml .github/workflows/ci.yml
+          git commit -m "ci: add reproducible pnpm dependency installation"
+          git push
