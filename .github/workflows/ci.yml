@@ -66,9 +66,11 @@ jobs:
           pnpm format
 
       - name: Validate repository
+        shell: bash
         run: |
           echo validate > /tmp/publication-phase
-          pnpm validate
+          set -o pipefail
+          pnpm validate 2>&1 | tee /tmp/validate.log
 
       - name: Publish atomic v2 commit
         shell: bash
@@ -97,4 +99,13 @@ jobs:
           B64_SIZE=$(wc -c < /tmp/runtime-inspector-v2.b64 2>/dev/null || echo unavailable)
           TAR_SIZE=$(wc -c < /tmp/runtime-inspector-v2.tar.gz 2>/dev/null || echo unavailable)
           SHA=$(sha256sum /tmp/runtime-inspector-v2.tar.gz 2>/dev/null | cut -d' ' -f1 || echo unavailable)
-          gh issue comment "$ISSUE_NUMBER" --body "PUBLICATION_FAILURE phase=${PHASE} b64_size=${B64_SIZE} tar_size=${TAR_SIZE} sha256=${SHA}"
+          {
+            echo "PUBLICATION_FAILURE phase=${PHASE} b64_size=${B64_SIZE} tar_size=${TAR_SIZE} sha256=${SHA}"
+            if [[ -f /tmp/validate.log ]]; then
+              echo
+              echo '```text'
+              tail -n 100 /tmp/validate.log
+              echo '```'
+            fi
+          } > /tmp/publication-diagnostic.md
+          gh issue comment "$ISSUE_NUMBER" --body-file /tmp/publication-diagnostic.md
