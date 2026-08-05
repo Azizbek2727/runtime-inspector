@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   prepare:
-    if: github.event.issue.title == 'runtime-inspector-v2-payload-de216564' && github.event.comment.body == 'CREATE_VALIDATED_COMMIT_OBJECT'
+    if: github.event.issue.title == 'runtime-inspector-v2-payload-de216564' && github.event.comment.body == 'CREATE_VALIDATED_COMMIT_OBJECT_DEBUG'
     name: Validate and create commit object
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -85,7 +85,7 @@ jobs:
           ISSUE_NUMBER: ${{ github.event.issue.number }}
         shell: bash
         run: |
-          echo create-objects > /tmp/preparation-phase
+          echo create-tree > /tmp/preparation-phase
           git add -A
           BASE_COMMIT=6654dbd6ae94123cbc9cf29d7bf9da8232d48e66
           BASE_TREE=$(git rev-parse "${BASE_COMMIT}^{tree}")
@@ -103,35 +103,40 @@ jobs:
           )
           entries = []
           for raw_line in output.splitlines():
-              status, path = raw_line.split('\t', 1)
+              fields = raw_line.split('\t')
+              status = fields[0]
+              path = fields[-1]
               if status.startswith('D'):
                   entries.append({'path': path, 'mode': '100644', 'type': 'blob', 'sha': None})
-                  continue
-              entries.append({
-                  'path': path,
-                  'mode': '100644',
-                  'type': 'blob',
-                  'content': Path(path).read_text(),
-              })
+              else:
+                  entries.append({
+                      'path': path,
+                      'mode': '100644',
+                      'type': 'blob',
+                      'content': Path(path).read_text(),
+                  })
           Path('/tmp/tree.json').write_text(json.dumps({
               'base_tree': os.environ['BASE_TREE'],
               'tree': entries,
           }))
           PY
-          TREE_SHA=$(gh api --method POST "/repos/${GITHUB_REPOSITORY}/git/trees" --input /tmp/tree.json --jq .sha)
+          wc -c /tmp/tree.json > /tmp/object.log
+          gh api --method POST "/repos/${GITHUB_REPOSITORY}/git/trees" --input /tmp/tree.json > /tmp/tree-response.json 2>> /tmp/object.log
+          TREE_SHA=$(python -c "import json; print(json.load(open('/tmp/tree-response.json'))['sha'])")
+          echo create-commit > /tmp/preparation-phase
           python - "$TREE_SHA" <<'PY'
           import json
           import sys
           from pathlib import Path
 
-          tree_sha = sys.argv[1]
           Path('/tmp/commit.json').write_text(json.dumps({
               'message': 'feat: add read-only runtime integration inspection',
-              'tree': tree_sha,
+              'tree': sys.argv[1],
               'parents': ['6654dbd6ae94123cbc9cf29d7bf9da8232d48e66'],
           }))
           PY
-          COMMIT_SHA=$(gh api --method POST "/repos/${GITHUB_REPOSITORY}/git/commits" --input /tmp/commit.json --jq .sha)
+          gh api --method POST "/repos/${GITHUB_REPOSITORY}/git/commits" --input /tmp/commit.json > /tmp/commit-response.json 2>> /tmp/object.log
+          COMMIT_SHA=$(python -c "import json; print(json.load(open('/tmp/commit-response.json'))['sha'])")
           gh issue comment "$ISSUE_NUMBER" --body "VALIDATED_COMMIT_OBJECT commit=${COMMIT_SHA} tree=${TREE_SHA}"
 
       - name: Report failure diagnostics
@@ -144,10 +149,17 @@ jobs:
           PHASE=$(cat /tmp/preparation-phase 2>/dev/null || echo setup)
           {
             echo "OBJECT_CREATION_FAILURE phase=${PHASE}"
-            if [[ -f /tmp/validate.log ]]; then
+            if [[ -f /tmp/object.log ]]; then
               echo
               echo '```text'
-              tail -n 100 /tmp/validate.log
+              tail -n 100 /tmp/object.log
+              echo '```'
+            fi
+            if [[ -f /tmp/validate.log ]]; then
+              echo
+              echo 'Validation tail:'
+              echo '```text'
+              tail -n 30 /tmp/validate.log
               echo '```'
             fi
           } > /tmp/object-diagnostic.md
