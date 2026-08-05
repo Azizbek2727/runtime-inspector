@@ -37,32 +37,43 @@ jobs:
           ISSUE_NUMBER: ${{ github.event.issue.number }}
         shell: bash
         run: |
+          echo assemble > /tmp/publication-phase
           gh api "/repos/${GITHUB_REPOSITORY}/issues/${ISSUE_NUMBER}/comments?per_page=100" \
             --jq '. as $comments | [5195901919,5196145210,5195923173,5195969099,5196049061,5196056644,5196064206,5196070580] | map(. as $id | ($comments[] | select(.id == $id) | .body | ltrimstr("PAYLOAD:"))) | join("")' \
             > /tmp/runtime-inspector-v2.b64
           base64 --decode /tmp/runtime-inspector-v2.b64 > /tmp/runtime-inspector-v2.tar.gz
 
       - name: Verify source payload
-        run: echo 'de216564474293d57c18f30b018eb59583db1b34dfa0241e84d84b3943bd6243  /tmp/runtime-inspector-v2.tar.gz' | sha256sum --check
+        run: |
+          echo verify > /tmp/publication-phase
+          echo 'de216564474293d57c18f30b018eb59583db1b34dfa0241e84d84b3943bd6243  /tmp/runtime-inspector-v2.tar.gz' | sha256sum --check
 
       - name: Restore v1 baseline and apply v2 files
         shell: bash
         run: |
+          echo apply > /tmp/publication-phase
           git checkout --detach 6654dbd6ae94123cbc9cf29d7bf9da8232d48e66
           tar -xzf /tmp/runtime-inspector-v2.tar.gz
 
       - name: Install locked dependencies
-        run: pnpm install --frozen-lockfile
+        run: |
+          echo install > /tmp/publication-phase
+          pnpm install --frozen-lockfile
 
       - name: Format repository
-        run: pnpm format
+        run: |
+          echo format > /tmp/publication-phase
+          pnpm format
 
       - name: Validate repository
-        run: pnpm validate
+        run: |
+          echo validate > /tmp/publication-phase
+          pnpm validate
 
       - name: Publish atomic v2 commit
         shell: bash
         run: |
+          echo publish > /tmp/publication-phase
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
@@ -82,7 +93,8 @@ jobs:
           ISSUE_NUMBER: ${{ github.event.issue.number }}
         shell: bash
         run: |
+          PHASE=$(cat /tmp/publication-phase 2>/dev/null || echo setup)
           B64_SIZE=$(wc -c < /tmp/runtime-inspector-v2.b64 2>/dev/null || echo unavailable)
           TAR_SIZE=$(wc -c < /tmp/runtime-inspector-v2.tar.gz 2>/dev/null || echo unavailable)
           SHA=$(sha256sum /tmp/runtime-inspector-v2.tar.gz 2>/dev/null | cut -d' ' -f1 || echo unavailable)
-          gh issue comment "$ISSUE_NUMBER" --body "PUBLICATION_FAILURE b64_size=${B64_SIZE} tar_size=${TAR_SIZE} sha256=${SHA}"
+          gh issue comment "$ISSUE_NUMBER" --body "PUBLICATION_FAILURE phase=${PHASE} b64_size=${B64_SIZE} tar_size=${TAR_SIZE} sha256=${SHA}"
