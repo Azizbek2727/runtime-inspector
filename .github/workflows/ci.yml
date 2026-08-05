@@ -1,17 +1,17 @@
-name: Prepare validated Runtime Inspector v2 artifact
+name: Prepare Runtime Inspector v2 Git objects
 
 on:
   issue_comment:
     types: [created]
 
 permissions:
-  contents: read
+  contents: write
   issues: write
 
 jobs:
   prepare:
-    if: github.event.issue.title == 'runtime-inspector-v2-payload-de216564' && github.event.comment.body == 'PREPARE_VALIDATED_ARTIFACT'
-    name: Format, validate, and upload candidate
+    if: github.event.issue.title == 'runtime-inspector-v2-payload-de216564' && github.event.comment.body == 'CREATE_VALIDATED_COMMIT_OBJECT'
+    name: Validate and create commit object
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -79,27 +79,60 @@ jobs:
           set -o pipefail
           pnpm validate 2>&1 | tee /tmp/validate.log
 
-      - name: Upload validated candidate
-        uses: actions/upload-artifact@v4
-        with:
-          name: runtime-inspector-v2-validated
-          path: |
-            README.md
-            docs
-            examples
-            package.json
-            pnpm-lock.yaml
-            schema
-            src
-            tests
-          if-no-files-found: error
-          retention-days: 1
-
-      - name: Report validated artifact
+      - name: Create validated Git tree and commit objects
         env:
           GH_TOKEN: ${{ github.token }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
-        run: gh issue comment "$ISSUE_NUMBER" --body "VALIDATED_ARTIFACT run=${GITHUB_RUN_ID}"
+        shell: bash
+        run: |
+          echo create-objects > /tmp/preparation-phase
+          git add -A
+          BASE_COMMIT=6654dbd6ae94123cbc9cf29d7bf9da8232d48e66
+          BASE_TREE=$(git rev-parse "${BASE_COMMIT}^{tree}")
+          export BASE_TREE
+          python <<'PY'
+          import json
+          import os
+          import subprocess
+          from pathlib import Path
+
+          base_commit = '6654dbd6ae94123cbc9cf29d7bf9da8232d48e66'
+          output = subprocess.check_output(
+              ['git', 'diff', '--cached', '--name-status', base_commit],
+              text=True,
+          )
+          entries = []
+          for raw_line in output.splitlines():
+              status, path = raw_line.split('\t', 1)
+              if status.startswith('D'):
+                  entries.append({'path': path, 'mode': '100644', 'type': 'blob', 'sha': None})
+                  continue
+              entries.append({
+                  'path': path,
+                  'mode': '100644',
+                  'type': 'blob',
+                  'content': Path(path).read_text(),
+              })
+          Path('/tmp/tree.json').write_text(json.dumps({
+              'base_tree': os.environ['BASE_TREE'],
+              'tree': entries,
+          }))
+          PY
+          TREE_SHA=$(gh api --method POST "/repos/${GITHUB_REPOSITORY}/git/trees" --input /tmp/tree.json --jq .sha)
+          python - "$TREE_SHA" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          tree_sha = sys.argv[1]
+          Path('/tmp/commit.json').write_text(json.dumps({
+              'message': 'feat: add read-only runtime integration inspection',
+              'tree': tree_sha,
+              'parents': ['6654dbd6ae94123cbc9cf29d7bf9da8232d48e66'],
+          }))
+          PY
+          COMMIT_SHA=$(gh api --method POST "/repos/${GITHUB_REPOSITORY}/git/commits" --input /tmp/commit.json --jq .sha)
+          gh issue comment "$ISSUE_NUMBER" --body "VALIDATED_COMMIT_OBJECT commit=${COMMIT_SHA} tree=${TREE_SHA}"
 
       - name: Report failure diagnostics
         if: failure()
@@ -110,12 +143,12 @@ jobs:
         run: |
           PHASE=$(cat /tmp/preparation-phase 2>/dev/null || echo setup)
           {
-            echo "PREPARATION_FAILURE phase=${PHASE}"
+            echo "OBJECT_CREATION_FAILURE phase=${PHASE}"
             if [[ -f /tmp/validate.log ]]; then
               echo
               echo '```text'
               tail -n 100 /tmp/validate.log
               echo '```'
             fi
-          } > /tmp/preparation-diagnostic.md
-          gh issue comment "$ISSUE_NUMBER" --body-file /tmp/preparation-diagnostic.md
+          } > /tmp/object-diagnostic.md
+          gh issue comment "$ISSUE_NUMBER" --body-file /tmp/object-diagnostic.md
