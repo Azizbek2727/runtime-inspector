@@ -1,17 +1,17 @@
-name: Prepare validated Runtime Inspector v2 tree
+name: Prepare validated Runtime Inspector v2 artifact
 
 on:
   issue_comment:
     types: [created]
 
 permissions:
-  contents: write
+  contents: read
   issues: write
 
 jobs:
   prepare:
-    if: github.event.issue.title == 'runtime-inspector-v2-payload-de216564' && github.event.comment.body == 'PREPARE_VALIDATED_TREE'
-    name: Format, validate, and publish candidate branch
+    if: github.event.issue.title == 'runtime-inspector-v2-payload-de216564' && github.event.comment.body == 'PREPARE_VALIDATED_ARTIFACT'
+    name: Format, validate, and upload candidate
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -37,7 +37,7 @@ jobs:
           ISSUE_NUMBER: ${{ github.event.issue.number }}
         shell: bash
         run: |
-          echo assemble > /tmp/publication-phase
+          echo assemble > /tmp/preparation-phase
           gh api "/repos/${GITHUB_REPOSITORY}/issues/${ISSUE_NUMBER}/comments?per_page=100" \
             --jq '. as $comments | [5195901919,5196145210,5195923173,5195969099,5196049061,5196056644,5196064206,5196070580] | map(. as $id | ($comments[] | select(.id == $id) | .body | ltrimstr("PAYLOAD:"))) | join("")' \
             > /tmp/runtime-inspector-v2.b64
@@ -47,7 +47,7 @@ jobs:
       - name: Restore v1 baseline and apply v2 files
         shell: bash
         run: |
-          echo apply > /tmp/publication-phase
+          echo apply > /tmp/preparation-phase
           git checkout --detach 6654dbd6ae94123cbc9cf29d7bf9da8232d48e66
           tar -xzf /tmp/runtime-inspector-v2.tar.gz
           python <<'PY'
@@ -75,26 +75,31 @@ jobs:
       - name: Validate repository
         shell: bash
         run: |
-          echo validate > /tmp/publication-phase
+          echo validate > /tmp/preparation-phase
           set -o pipefail
           pnpm validate 2>&1 | tee /tmp/validate.log
 
-      - name: Publish validated candidate tree
+      - name: Upload validated candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-inspector-v2-validated
+          path: |
+            README.md
+            docs
+            examples
+            package.json
+            pnpm-lock.yaml
+            schema
+            src
+            tests
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Report validated artifact
         env:
           GH_TOKEN: ${{ github.token }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
-        shell: bash
-        run: |
-          echo publish-candidate > /tmp/publication-phase
-          git checkout 6654dbd6ae94123cbc9cf29d7bf9da8232d48e66 -- .github/workflows/ci.yml
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A
-          git commit -m 'feat: add read-only runtime integration inspection'
-          COMMIT_SHA=$(git rev-parse HEAD)
-          TREE_SHA=$(git rev-parse HEAD^{tree})
-          git push --force origin HEAD:refs/heads/agent/runtime-inspector-v2-validated
-          gh issue comment "$ISSUE_NUMBER" --body "VALIDATED_TREE commit=${COMMIT_SHA} tree=${TREE_SHA}"
+        run: gh issue comment "$ISSUE_NUMBER" --body "VALIDATED_ARTIFACT run=${GITHUB_RUN_ID}"
 
       - name: Report failure diagnostics
         if: failure()
@@ -103,7 +108,7 @@ jobs:
           ISSUE_NUMBER: ${{ github.event.issue.number }}
         shell: bash
         run: |
-          PHASE=$(cat /tmp/publication-phase 2>/dev/null || echo setup)
+          PHASE=$(cat /tmp/preparation-phase 2>/dev/null || echo setup)
           {
             echo "PREPARATION_FAILURE phase=${PHASE}"
             if [[ -f /tmp/validate.log ]]; then
