@@ -1,8 +1,8 @@
 name: Apply Runtime Inspector v2 payload
 
 on:
-  issues:
-    types: [opened]
+  issue_comment:
+    types: [created]
 
 permissions:
   contents: write
@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   apply:
-    if: github.event.issue.title == 'runtime-inspector-v2-payload-de216564'
+    if: github.event.issue.title == 'runtime-inspector-v2-payload-de216564' && github.event.comment.body == 'APPLY'
     name: Format, validate, and publish
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -31,12 +31,16 @@ jobs:
         with:
           node-version: 22
 
-      - name: Decode verified source payload
+      - name: Assemble and verify source payload
         env:
-          PAYLOAD: ${{ github.event.issue.body }}
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
         shell: bash
         run: |
-          printf '%s' "$PAYLOAD" | base64 --decode > /tmp/runtime-inspector-v2.tar.gz
+          gh api "/repos/${GITHUB_REPOSITORY}/issues/${ISSUE_NUMBER}/comments?per_page=100" \
+            --jq 'sort_by(.id) | map(select(.body | startswith("PAYLOAD:")) | .body | ltrimstr("PAYLOAD:")) | join("")' \
+            > /tmp/runtime-inspector-v2.b64
+          base64 --decode /tmp/runtime-inspector-v2.b64 > /tmp/runtime-inspector-v2.tar.gz
           echo 'de216564474293d57c18f30b018eb59583db1b34dfa0241e84d84b3943bd6243  /tmp/runtime-inspector-v2.tar.gz' | sha256sum --check
 
       - name: Restore v1 baseline and apply v2 files
